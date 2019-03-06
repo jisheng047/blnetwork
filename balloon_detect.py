@@ -18,6 +18,16 @@ from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
 
+from keras.models import Model, load_model
+from keras.layers import Input, BatchNormalization, Activation, Dense, Dropout
+from keras.layers.core import Lambda, RepeatVector, Reshape
+from keras.layers.convolutional import Conv2D, Conv2DTranspose
+from keras.layers.pooling import MaxPooling2D, GlobalMaxPool2D
+from keras.layers.merge import concatenate, add
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.optimizers import Adam
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+
 IMG_WIDTH = 768
 IMG_HEIGHT = 512
 TRAIN_PATH = os.path.join(os.getcwd()+ "/train/")
@@ -32,16 +42,24 @@ def get_data_training(path, train=True):
 	print('Getting and resizing images ... ')
 	for n, id_ in tqdm_notebook(enumerate(ids), total=len(ids)):    
 		# Load images
-		img = load_img(path + '/images/' + id_ + '.jpg')
+		# img = load_img(path + '/images/' + id_ + '.jpg')
 		mask = np.load(path + '/mask/' + id_ + '.npy')
 		
-		x_img = img_to_array(img)
+		# x_img = img_to_array(img)
+		x_img = imread(path + '/images/' + id_ + '.jpg')
 		x_img = resize(x_img, (IMG_WIDTH, IMG_HEIGHT, 3), mode='constant', preserve_range=True)
 		mask = resize(mask, (IMG_WIDTH, IMG_HEIGHT, 1), mode='constant', preserve_range=True)
 		mask[mask > 0] = 1
-		X[n] = x_img.squeeze() / 255
+		# X[n] = x_img.squeeze() / 255
+		X[n] = x_img / 255
 		if train:
 			y[n] = mask
+			
+		# pre_img = tf.keras.preprocessing.image.array_to_img(X[n])
+		# pre_img.save('./tmp/output' + str(n) + '.jpg')
+		# pre_mask = tf.keras.preprocessing.image.array_to_img(y[n])
+		# pre_mask.save('./tmp/output_mask' + str(n) + '.jpg')
+		# break
 	print('Done!')
 	if train:
 		return X, y
@@ -57,16 +75,27 @@ def load_model(model_dir):
    	
 def input_arg():
 	parser = argparse.ArgumentParser(description='Input path for images, labels')
-	parser.add_argument('--path_ds', help='Input path for dataset images/mask', required=True)
+	parser.add_argument('--path_train', help='Input path for dataset training images/mask', required=True)
+	parser.add_argument('--path_valid', help='Input path for dataset valid images/mask', required=True)
 	args = parser.parse_args()
 	args = vars(args)
 	return args
 
 if __name__ == "__main__":
 	args = input_arg()
-	X, y = get_data_training(args["path_ds"])
-	X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.15, random_state=2019)
-	
+	X_train, y_train = get_data_training(args["path_train"])
+	X_valid, y_valid = get_data_training(args["path_valid"])
+	# X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.15, random_state=2019)
+	# print(X_train.shape)
+	# print(y_train.shape)
+	for index in range(len(X_train[0])):
+		image = X_train[index]
+		pre_img = tf.keras.preprocessing.image.array_to_img(image)
+		pre_img.save('./tmp/output'+ str(index) + '.jpg')
+		mask = y_train[index]
+		pre_mask = tf.keras.preprocessing.image.array_to_img(mask)
+		pre_mask.save('./tmp/output_mask'+ str(index) + '.jpg')
+	# 	# break
 	# Normalize interval [0,1] for image
 	# Data Augmentation 
 	# Rotation hue channel of HSV image (range 0 to 0.3)
@@ -76,9 +105,12 @@ if __name__ == "__main__":
 	# Using BCE - Binary Cross Entropy Loss, Dice - Sorenson-Dice coefficientfor x in X_train:
 	# input_img = Input((IMG_WIDTH, IMG_HEIGHT, 3), name='img')
 
-	model = load_model('./')
 	# model = get_speechnet(input_img, n_filters=64, dropout=0.05, batchnorm=True)
-	optimizer = tf.keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
-	model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"])
-	results = model.fit(X_train, y_train, batch_size=4, epochs=1, validation_data=(X_valid, y_valid))
+	# model = load_model('./')
+	# optimizer = tf.keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
+	# model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"])
+	# filepath = 'speech_balloon.h5'
+	# checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
+	# callbacks_list = [checkpoint]
+	# results = model.fit(X_train, y_train, batch_size=4, epochs=10, validation_data=(X_valid, y_valid),callbacks =callbacks_list)
 
