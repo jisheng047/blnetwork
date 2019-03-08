@@ -1,23 +1,4 @@
-# from keras.models import load_model
 import tensorflow as tf 
-filepath = 'speechnet.h5'
-# new_model = load_model(filepath)
-new_model = tf.keras.models.load_model(filepath)
-# new_model.summary()
-model_json = new_model.to_yaml()
-with open("model_num.yaml", "w") as json_file:
-    json_file.write(model_json)
-# import tensorflow as tf
-# from keras.models import model_from_yaml
-# from keras.utils import plot_model
-
-# filepath = 'speechnet.h5'
-# # model = tf.keras.models.load_model(filepath)
-# model = 
-# yaml_string = model.to_yaml()
-# new_model = tf.keras.models.model_from_yaml(yaml_string)
-# plot_model(new_model, to_file='model1.png', show_shapes=True)
-
 from keras.models import Model, load_model
 from keras.layers import Input, BatchNormalization, Activation, Dense, Dropout
 from keras.layers.core import Lambda, RepeatVector, Reshape

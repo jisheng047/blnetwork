@@ -68,33 +68,19 @@ def dice_coef_loss_bce(y_true, y_pred, dice=0.5, bce=0.5, bootstrapping='hard', 
 def get_data_training(path, train=True):
 	ids = next(os.walk(path + "images"))[2]
 	ids = list(map(lambda item: item[:-4],ids))
-	X = np.zeros((len(ids), IMG_WIDTH, IMG_HEIGHT, 3), dtype=np.float32) # grayscale image
+	X = np.zeros((len(ids), IMG_WIDTH, IMG_HEIGHT, 3), dtype=np.float32)
 	if train:
-		y = np.zeros((len(ids), IMG_WIDTH, IMG_HEIGHT, 1), dtype=np.float32) # grayscale image
-	print('Getting and resizing images ... ')
+		y = np.zeros((len(ids), IMG_WIDTH, IMG_HEIGHT, 1), dtype=np.float32)
 	for n, id_ in tqdm_notebook(enumerate(ids), total=len(ids)):    
-		# Load images
-		# img = load_img(path + '/images/' + id_ + '.jpg')
 		mask = np.load(path + '/mask/' + id_ + '.npy')
-		
-		# x_img = img_to_array(img)
 		x_img = imread(path + '/images/' + id_ + '.jpg')
 		x_img = resize(x_img, (IMG_WIDTH, IMG_HEIGHT), mode='constant', preserve_range=True)
-		mask = resize(mask, (IMG_WIDTH, IMG_HEIGHT), mode='constant', preserve_range=True)
-		mask = np.expand_dims(mask, axis=2)
-		#mask[mask > 0] = 1
-		# X[n] = x_img.squeeze() / 255
-		X[n] = x_img
-		X[n] /= 255.	
+		mask = resize(mask, (IMG_WIDTH, IMG_HEIGHT,1), mode='constant', preserve_range=True)
+		mask[mask >= 0.8] = 1.
+		mask[mask < 0.8] = 0.
+		X[n] = x_img / 255.
 		if train:
 			y[n] = mask
-			
-		# pre_img = tf.keras.preprocessing.image.array_to_img(X[n])
-		# pre_img.save('./tmp/output' + str(n) + '.jpg')
-		# pre_mask = tf.keras.preprocessing.image.array_to_img(y[n])
-		# pre_mask.save('./tmp/output_mask' + str(n) + '.jpg')
-		# break
-	print('Done!')
 	if train:
 		return X, y
 	else:
@@ -124,33 +110,13 @@ if __name__ == "__main__":
 	args = input_arg()
 	X_train, y_train = get_data_training(args["path_train"])
 	X_valid, y_valid = get_data_training(args["path_valid"])
-	# X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.15, random_state=2019)
-	# print(X_train.shape)
-	# print(y_train.shape)
-	#for index in range(len(X_train[0])):
-	#	image = X_train[index]
-	#	pre_img = tf.keras.preprocessing.image.array_to_img(image)
-	#	pre_img.save('./tmp/output'+ str(index) + '.jpg')
-	#	mask = y_train[index]
-	#	pre_mask = tf.keras.preprocessing.image.array_to_img(mask)
-	#	pre_mask.save('./tmp/output_mask'+ str(index) + '.jpg')
-	# 	# break
-	# Normalize interval [0,1] for image
-	# Data Augmentation 
-	# Rotation hue channel of HSV image (range 0 to 0.3)
-	# Height and Width shifts (range: 0.2 of each dimension size)
-	# Flipping image horizontal and vertical
-	# Using Adam (lr = 0.001, beta1 = 0.9, beta2=0.999 , epoch=500)
-	# Using BCE - Binary Cross Entropy Loss, Dice - Sorenson-Dice coefficientfor x in X_train:
-	# input_img = Input((IMG_WIDTH, IMG_HEIGHT, 3), name='img')
-
-	# model = get_speechnet(input_img, n_filters=64, dropout=0.05, batchnorm=True)
 	model = load_model('./')
 	optimizer = tf.keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999)
 	bce_dice_loss = bce_dice_loss(dice=0.8, bce=0.2, bootstrapping='soft', alpha=1)
 	# model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=[dice_coef])
+	# model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=[dice_coef])
 	model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=["accuracy"])
-	filepath = 'speech_balloon1.h5'
+	filepath = 'speech_balloon_v1.h5'
 	checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
 	callbacks_list = [checkpoint]
 	results = model.fit(X_train, y_train, batch_size=4, epochs=50, validation_data=(X_valid, y_valid),callbacks =callbacks_list)
